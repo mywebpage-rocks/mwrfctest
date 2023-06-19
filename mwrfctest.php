@@ -327,7 +327,7 @@ class MWRFcTest extends Module
         $routes =  [
             'module-mwrfctest-show' => [
                 'controller' => 'show',
-                'rule' => '{link_rewrite}',
+                'rule' => $url,
                 'keywords' => [
                     'link_rewrite' =>  array('regexp' => '[_a-zA-Z0-9-\pL]*', 'param' => 'link_rewrite'),
                 ],
