@@ -49,11 +49,12 @@ class MWRFcTest extends Module
                 'lang' => true
             ],
             'DESCRIPTION' => [
-                'type' => 'text',
+                'type' => 'textarea',
+                'autoload_rte' => true,
                 'data' => 'string',
                 'default_value' => '',
                 'label' => $this->l('Description'),
-                'col' => '4',
+                'col' => '8',
                 'desc' => $this->l('Enter description'),
                 'required' => 'true',
                 'icon' => 'comments-o',
@@ -79,7 +80,7 @@ class MWRFcTest extends Module
             $this->fields_list[$key] = array_merge($this->fields_list[$key], $values);
         }
         $this->hooks_list = [
-            'moduleRoutes'
+            'moduleRoutes',
         ];
         $this->ps_17_hooks = [];
         $this->ps_16_hooks = [];
@@ -260,6 +261,7 @@ class MWRFcTest extends Module
                 'type' => $field['type'],
                 'label' => $field['label'],
                 'desc' => $field['desc'],
+                'autoload_rte' => (isset($field['autoload_rte'])) ? true : false,
             ];
             if (isset($field['lang']) && $field['lang']) {
                 $form_field['lang'] = $field['lang'];
@@ -287,13 +289,21 @@ class MWRFcTest extends Module
         $config_form['form'] = $form;
         return $config_form;
     }
+    protected function normalizeUrl($str)
+    {
+        return Tools::str2url($str);
+    }
     protected function getConfigFormValues()
     {
         $languages = Language::getLanguages(false);
         $form_values = [];
         foreach ($this->fields_list as $name => $field) {
             foreach ($languages as $lang) {
-                $form_values[$this->getConfigName($name)][$lang['id_lang']] = Configuration::get($this->getConfigName($name) . '_' . $lang['id_lang']);
+                if (str_contains($this->getConfigName($name), 'URL')) {
+                    $form_values[$this->getConfigName($name)][$lang['id_lang']] = $this->normalizeUrl(Configuration::get($this->getConfigName($name) . '_' . $lang['id_lang']));
+                } else {
+                    $form_values[$this->getConfigName($name)][$lang['id_lang']] = Configuration::get($this->getConfigName($name) . '_' . $lang['id_lang']);
+                }
             }
         }
         return $form_values;
@@ -308,24 +318,26 @@ class MWRFcTest extends Module
             }
         }
     }
-    public function hookModuleRoutes()
+    public function hookModuleRoutes($params)
     {
-        $url = Configuration::get($this->getConfigName('URL') . '_' . $this->context->language->id);
+        $url = Configuration::get($this->getConfigName('URL') . '_' . $params['cookie']->id_lang);
         if (!$url) {
             return false;
         }
-        return  [
+        $routes =  [
             'module-mwrfctest-show' => [
                 'controller' => 'show',
-                'rule' => $url,
+                'rule' => '{link_rewrite}',
                 'keywords' => [
                     'link_rewrite' =>  array('regexp' => '[_a-zA-Z0-9-\pL]*', 'param' => 'link_rewrite'),
                 ],
                 'params' => [
                     'fc' => 'module',
                     'module' => 'mwrfctest',
+                    'link_rewrite' => $url
                 ],
             ]
         ];
+        return $routes;
     }
 }
