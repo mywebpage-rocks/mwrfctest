@@ -81,6 +81,8 @@ class MWRFcTest extends Module
         }
         $this->hooks_list = [
             'moduleRoutes',
+            'displayHeader',
+            'actionFrontControllerSetVariables'
         ];
         $this->ps_17_hooks = [];
         $this->ps_16_hooks = [];
@@ -327,17 +329,47 @@ class MWRFcTest extends Module
         $routes =  [
             'module-mwrfctest-show' => [
                 'controller' => 'show',
-                'rule' => $url,
+                'rule' =>  $url,
                 'keywords' => [
-                    'link_rewrite' =>  array('regexp' => '[_a-zA-Z0-9-\pL]*', 'param' => 'link_rewrite'),
+                    'link_rewrite' =>  [
+                        'regexp' => '[_a-zA-Z0-9-\pL]*',
+                        'param' => 'link_rewrite'
+                    ],
+                    'lang' => [
+                        'regexp' => '[_a-zA-Z0-9-\pL]*',
+                        'param' => 'language'
+                    ]
                 ],
                 'params' => [
+                    'lang' => true,
                     'fc' => 'module',
                     'module' => 'mwrfctest',
-                    'link_rewrite' => $url
+                    'link_rewrite' => $url,
                 ],
             ]
         ];
+        // echo '<pre>';
+        // var_dump($routes);
+        // die();
         return $routes;
+    }
+    public function hookActionFrontControllerSetVariables($params)
+    {
+        $language_ids = Language::getIDs();
+
+        if (isset($this->context->language) && !in_array($this->context->language->id, $language_ids)) {
+            $language_ids[] = (int)$this->context->language->id;
+        }
+        $fc_urls = [];
+        foreach ($language_ids as $id_lang) {
+            $fc_urls[Language::getIsoById($id_lang)] =  Configuration::get($this->getConfigName('URL') . '_' . $id_lang);
+        }
+        return $fc_urls;
+    }
+    public function hookDisplayHeader()
+    {
+        if (Tools::getValue('module') && Tools::getValue('module') == 'mwrfctest') {
+            $this->context->controller->registerJavascript('modules' . $this->name . '-script', 'modules/' . $this->name . '/views/js/front.js', ['position' => 'bottom', 'priority' => 150]);
+        }
     }
 }
